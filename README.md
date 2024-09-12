@@ -9,7 +9,7 @@ Esta prueba consiste en una API para gestionar contactos utilizando una integrac
 ### Configuración:
 1. Clonar el repositorio:
    ```
-   git clone https://github.com/daniel-agudelo21/Prueba-Hubspot-Backend
+   git clone https://github.com/daniel-agudelo21/Prueba-Hubspot-Backend.git
    ```
 2. Ingresamos a la carpeta:
    ```
