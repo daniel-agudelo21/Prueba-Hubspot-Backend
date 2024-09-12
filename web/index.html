@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestor de contactos</title>
+  </head>
+  <body>
+    <h1>Gestor de contactos</h1>
+
+    <!-- Formulario para crear contacto -->
+    <form id="createContactForm">
+      <h2>Crear contactos</h2>
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="text" id="firstname" placeholder="First Name" required />
+      <input type="text" id="lastname" placeholder="Last Name" required />
+      <input type="text" id="phone" placeholder="Phone" required />
+      <button type="submit">Crear</button>
+    </form>
+    <div id="createErrorMessages"></div>
+    <div id="createSuccessMessages"></div>
+
+    <!-- Buscar contacto -->
+    <h2>Buscar contacto por email</h2>
+    <form id="searchContactForm">
+      <input type="text" id="searchEmail" placeholder="Email" required />
+      <button type="submit">Buscar contacto</button>
+    </form>
+    <div id="searchResult"></div>
+
+    <!-- Mostrar lista de contactos -->
+    <h2>Lista de contactos</h2>
+    <table id="contactTable" border="1">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Nombre</th>
+          <th>Apellido</th>
+          <th>Teléfono</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="editErrorMessages"></div>
+    <div id="successMessages"></div>
+
+    <script>
+      const apiUrl = "http://localhost:3001";
+
+      // Función para obtener y mostrar los contactos
+      async function getContacts() {
+        const response = await fetch(apiUrl);
+        const contacts = await response.json();
+
+        const contactTable = document.querySelector("#contactTable tbody");
+        contactTable.innerHTML = ""; // Limpiar tabla
+
+        contacts.forEach((contact) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td id="email-${contact.id}">${contact.email}</td>
+            <td id="firstname-${contact.id}">${contact.firstname}</td>
+            <td id="lastname-${contact.id}">${contact.lastname}</td>
+            <td id="phone-${contact.id}">${contact.phone}</td>
+            <td>
+              <button onclick="enableEdit('${contact.id}')">Edit</button>
+              <button onclick="deleteContact('${contact.id}')">Delete</button>
+            </td>
+          `;
+          contactTable.appendChild(row);
+        });
+      }
+
+      // Obtener los contactos al cargar la página
+      getContacts();
+
+      function showSuccessMessage(sectionId, message) {
+        const successDiv = document.getElementById(sectionId);
+        successDiv.innerHTML = ""; // Limpiar mensajes anteriores
+        const successMessage = document.createElement("p");
+        successMessage.style.color = "green";
+        successMessage.textContent = message;
+        successDiv.appendChild(successMessage);
+
+        // Borrar el mensaje después de 3 segundos
+        setTimeout(() => {
+          successDiv.innerHTML = "";
+        }, 3000);
+      }
+
+      function showErrorMessage(sectionId, messages) {
+        const errorDiv = document.getElementById(sectionId);
+        errorDiv.innerHTML = ""; // Limpiar mensajes anteriores
+        messages.forEach((message) => {
+          const errorMessage = document.createElement("p");
+          errorMessage.style.color = "red";
+          errorMessage.textContent = message;
+          errorDiv.appendChild(errorMessage);
+        });
+      }
+
+      // Función para habilitar la edición en la fila de la tabla
+      function enableEdit(id) {
+        const email = document.getElementById(`email-${id}`).textContent;
+        const firstname = document.getElementById(
+          `firstname-${id}`
+        ).textContent;
+        const lastname = document.getElementById(`lastname-${id}`).textContent;
+        const phone = document.getElementById(`phone-${id}`).textContent;
+
+        const row = document.getElementById(`email-${id}`).parentElement;
+        row.innerHTML = `
+          <td><input type="email" id="editEmail-${id}" value="${email}" /></td>
+          <td><input type="text" id="editFirstname-${id}" value="${firstname}" /></td>
+          <td><input type="text" id="editLastname-${id}" value="${lastname}" /></td>
+          <td><input type="text" id="editPhone-${id}" value="${phone}" /></td>
+          <td>
+            <button onclick="saveContact('${id}')">Guardar</button>
+            <button onclick="getContacts()">Cancelar</button>
+          </td>
+        `;
+      }
+
+      // Función para guardar los cambios del contacto
+      async function saveContact(id) {
+        const newEmail = document.getElementById(`editEmail-${id}`).value;
+        const newFirstname = document.getElementById(
+          `editFirstname-${id}`
+        ).value;
+        const newLastname = document.getElementById(`editLastname-${id}`).value;
+        const newPhone = document.getElementById(`editPhone-${id}`).value;
+
+        try {
+          const response = await fetch(`${apiUrl}/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: newEmail,
+              firstname: newFirstname,
+              lastname: newLastname,
+              phone: newPhone,
+            }),
+          });
+
+          if (!response.ok) {
+            const data = await response.json();
+            showErrorMessage(
+              "editErrorMessages",
+              data.error || ["El correo ya está registrado"]
+            );
+          } else {
+            await getContacts();
+            showSuccessMessage(
+              "successMessages",
+              "Contacto editado exitosamente."
+            );
+          }
+        } catch (error) {
+          showErrorMessage("editErrorMessages", [
+            "Error al conectar con el servidor.",
+          ]);
+        }
+      }
+
+      // Función para eliminar contacto
+      async function deleteContact(id) {
+        const confirmed = confirm(
+          "¿Está seguro que desea eliminar este contacto?"
+        );
+        if (confirmed) {
+          try {
+            await fetch(`${apiUrl}/${id}`, {
+              method: "DELETE",
+            });
+            getContacts(); // Refrescar lista
+            alert("Contacto eliminado satisfactoriamente");
+          } catch (error) {
+            alert("Error al eliminar el contacto");
+          }
+        }
+      }
+
+      // Función para buscar un contacto por email
+      document
+        .getElementById("searchContactForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("searchEmail").value;
+
+          const response = await fetch(`${apiUrl}/?email=${email}`);
+          const data = await response.json();
+          const searchResultDiv = document.getElementById("searchResult");
+          searchResultDiv.innerHTML = data.length
+            ? `
+                <p>
+                  Nombre: ${data[0].firstname}
+                </p>
+                <p>
+                  Apellido: ${data[0].lastname}
+                </p>
+                <p>
+                  Correo: ${data[0].email}
+                </p>
+                <p>
+                  Celular: ${data[0].phone}
+                </p>
+            `
+            : "<p>No se encuentra el contacto con este email.</p>";
+        });
+
+      // Función para crear un nuevo contacto
+      document
+        .getElementById("createContactForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          // Limpiar mensajes de error anteriores
+          const errorDiv = document.getElementById("createErrorMessages");
+          const successDiv = document.getElementById("createSuccessMessages");
+          errorDiv.innerHTML = "";
+          successDiv.innerHTML = "";
+
+          // Recoger los valores del formulario
+          const email = document.getElementById("email").value;
+          const firstname = document.getElementById("firstname").value;
+          const lastname = document.getElementById("lastname").value;
+          const phone = document.getElementById("phone").value;
+
+          try {
+            // Hacer la solicitud al servidor
+            const response = await fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, firstname, lastname, phone }),
+            });
+
+            if (!response.ok) {
+              const data = await response.json();
+              showErrorMessage(
+                "createErrorMessages",
+                data.error || ["El correo ya está registrado."]
+              );
+            } else {
+              // Si todo fue exitoso, refrescar la lista de contactos
+              await getContacts();
+              showSuccessMessage(
+                "createSuccessMessages",
+                "Contacto creado exitosamente."
+              );
+              document.getElementById("createContactForm").reset();
+            }
+          } catch (error) {
+            showErrorMessage("createErrorMessages", [
+              "Error al conectar con el servidor.",
+            ]);
+          }
+        });
+    </script>
+  </body>
+</html>

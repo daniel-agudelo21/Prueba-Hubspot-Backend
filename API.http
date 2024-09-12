@@ -1,0 +1,30 @@
+### Recuperar todos los contactos
+GET http://localhost:3001/
+
+### Recuperar contacto por ID
+GET http://localhost:3001/57245106798
+
+### Recuperar los contactos por un email
+GET http://localhost:3001/?email=dandon@gmail.com
+
+### Crear Contacto con POST
+POST http://localhost:3001/
+Content-Type: application/json
+
+{
+  "email": "dandin@gmail.com",
+  "firstname": "Daniel",
+  "lastname": "Agudelo",
+  "phone": "123456"
+}
+
+### Actualizar el contacto con PATCH
+PATCH http://localhost:3001/56493700747
+Content-Type: application/json
+
+{
+    "email": "dan@hotmail.com"
+}
+
+### Eliminar el contacto con Delete
+DELETE http://localhost:3001/57208324987
